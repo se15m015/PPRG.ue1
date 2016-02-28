@@ -48,6 +48,8 @@ namespace ue1
         private int _index;
         private Random rand;
         public bool run = true;
+        public Func<int> firstFork;
+        public Func<int> secondFork;
 
         public Philosopher(int index, int maxThinkingTime, int maxEatingTime)
         {
@@ -55,6 +57,8 @@ namespace ue1
             rand = new Random();
             _maxThinkingTime = maxThinkingTime;
             _maxEatingTime = maxEatingTime;
+            firstFork = () => { return _index; };
+            secondFork = () => { return (_index+1)%ForkStore.forks.Length; };
         }
 
         public void Work()
@@ -66,15 +70,11 @@ namespace ue1
                 Thread.Sleep(thinkingTime);
                 Console.WriteLine("{0}: Phil{1} wants to eat now", Help.GetRuntime(), _index);
 
-                ForkStore.forks[_index].WaitOne();
+                ForkStore.forks[firstFork()].WaitOne();
                 Console.WriteLine("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, _index);
 
 
-                var indexSecondFork = (_index-1)%ForkStore.forks.Length;
-                if(indexSecondFork < 0)
-                {
-                    indexSecondFork = indexSecondFork + ForkStore.forks.Length;
-                }
+                var indexSecondFork = secondFork();
 
                 ForkStore.forks[indexSecondFork].WaitOne();
                 Console.WriteLine("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexSecondFork);
@@ -87,8 +87,7 @@ namespace ue1
                 ForkStore.forks[indexSecondFork].ReleaseMutex();
 
             }
-            Console.WriteLine("{0}: Phil{1} stopped", Help.GetRuntime(), _index);
-            
+            Console.WriteLine("{0}: Phil{1} stopped", Help.GetRuntime(), _index);   
         }
     }
 
@@ -109,6 +108,10 @@ namespace ue1
             Console.WriteLine("Eatingtime (Milliseconds): ");
             int eatingtime = 0;
             ReadInt("Eatingtime", out eatingtime);
+            // Deadlock safe
+            Console.WriteLine("Deadlock safe? 0 = false, 1 = true: ");
+            int deadlockSafe = 0;
+            ReadInt("DeadlockSafe", out deadlockSafe);
 
             Console.WriteLine("{0}, {1}, {2}", numberOfPhilos, thinkingtime, eatingtime);
 
@@ -123,6 +126,14 @@ namespace ue1
             Parallel.For(0,numberOfPhilos, i =>
             {
                 Philosopher phil = new Philosopher(i, thinkingtime, eatingtime);
+
+                // Anti Deadlock -> righthanded Phil
+                if (i == 0 && deadlockSafe == 1)
+                {
+                    phil.firstFork = () => { return (i + 1)%ForkStore.forks.Length; };
+                    phil.secondFork = () => { return i; };
+                }
+
                 Thread tphil = new Thread(new ThreadStart(phil.Work));
                 tphil.Start();
 
