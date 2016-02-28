@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Media;
 using System.Runtime.Remoting.Messaging;
@@ -10,66 +12,155 @@ using System.Threading.Tasks;
 
 namespace ue1
 {
+    public static class Help
+    {
+        static Stopwatch sw = new Stopwatch();
+
+        public static void Init()
+        {
+            sw.Start();
+        }
+
+        public static string GetRuntime()
+        {
+            return sw.ElapsedMilliseconds.ToString();
+        }
+    }
+
+    public static class ForkStore
+    {
+        public static Mutex[] forks;
+
+        public static void Init(int numberOfPhilos)
+        {
+            forks = new Mutex[numberOfPhilos];
+            for (int i = 0; i < forks.Length; i++)
+            {
+                forks[i] = new Mutex();
+            }
+        }
+    }
 
     public class Philosopher
     {
-        private int _thinkingTime;
-        private int _eatingTime;
+        private int _maxThinkingTime;
+        private int _maxEatingTime;
+        private int _index;
+        private Random rand;
+        public bool run = true;
 
-        public Philosopher(int t1, int t2)
+        public Philosopher(int index, int maxThinkingTime, int maxEatingTime)
         {
-            Random rnd = new Random();
-            _thinkingTime = rnd.Next(0, t1);
-            _eatingTime = rnd.Next(0, t2);
-
-            //_thinkingTime = t1;
-            //_eatingTime = t2;
-
+            _index = index;
+            rand = new Random();
+            _maxThinkingTime = maxThinkingTime;
+            _maxEatingTime = maxEatingTime;
         }
 
         public void Work()
         {
-            while (true)
-            { 
-                Console.Out.WriteLine("t1 {0}", _thinkingTime);
-                Console.Out.WriteLine("t2 {0}", _eatingTime);
-                Console.Out.WriteLine("Phil1 thinking...");
-                Thread.Sleep(_thinkingTime);
-                Console.Out.WriteLine("Phil1 wants to eat now");
-                
-                Console.Out.WriteLine("Phil1 wants to take fork 0");
-                //take fork 
-                Console.Out.WriteLine("Phil1 wants to take fork 1");
-                //take fork
-                Thread.Sleep(_eatingTime);
-                Console.Out.WriteLine("Phil1 is done with eating");
-                //put forks back
+            while (run)
+            {
+                var thinkingTime = rand.Next(0, _maxThinkingTime);
+                Console.WriteLine("{0}: Phil{1} is thinking for {2}ms...", Help.GetRuntime(), _index, thinkingTime);
+                Thread.Sleep(thinkingTime);
+                Console.WriteLine("{0}: Phil{1} wants to eat now", Help.GetRuntime(), _index);
+
+                ForkStore.forks[_index].WaitOne();
+                Console.WriteLine("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, _index);
+
+
+                var indexSecondFork = (_index-1)%ForkStore.forks.Length;
+                if(indexSecondFork < 0)
+                {
+                    indexSecondFork = indexSecondFork + ForkStore.forks.Length;
+                }
+
+                ForkStore.forks[indexSecondFork].WaitOne();
+                Console.WriteLine("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexSecondFork);
+
+                var eating_time = rand.Next(0, _maxEatingTime);
+                Thread.Sleep(eating_time);
+                Console.WriteLine("{0}: Phil{1} is done eating. Took {2}ms", Help.GetRuntime(), _index, eating_time);
+
+                ForkStore.forks[_index].ReleaseMutex();
+                ForkStore.forks[indexSecondFork].ReleaseMutex();
+
             }
+            Console.WriteLine("{0}: Phil{1} stopped", Help.GetRuntime(), _index);
+            
         }
     }
 
     public class Program
     {
+        static List<Philosopher> philosophers_list = new List<Philosopher>();
+        static List<Thread> threads_philosophers_list = new List<Thread>();
+
         public static void Main(string[] args)
         {
-            Console.Out.WriteLine("Number of Philosoper: ");
-            int n = Int32.Parse(Console.ReadLine());
-            Console.Out.WriteLine("Thinkingtime (Milliseconds): ");
-            int t1 = Int32.Parse(Console.ReadLine());
-            Console.Out.WriteLine("Eatingtime (Milliseconds): ");
-            int t2 = Int32.Parse(Console.ReadLine());
+            
+            Console.WriteLine("Number of Philosopher: ");
+            int numberOfPhilos = 0;
+            ReadInt("Number of Philosopher", out numberOfPhilos);
+            Console.WriteLine("Thinkingtime (Milliseconds): ");
+            int thinkingtime = 0;
+            ReadInt("Thinkingtime", out thinkingtime);
+            Console.WriteLine("Eatingtime (Milliseconds): ");
+            int eatingtime = 0;
+            ReadInt("Eatingtime", out eatingtime);
 
-            Console.Out.WriteLine("{0}, {1}, {2}", n, t1, t2);
-            Philosopher phil1 = new Philosopher(t1, t2);
-            //Thread tphil1 = new Thread(new ThreadStart(phil1.Work));
-            Thread tphil1 = new Thread(new ThreadStart(Abc));
+            Console.WriteLine("{0}, {1}, {2}", numberOfPhilos, thinkingtime, eatingtime);
 
-            tphil1.Start();
+            Console.WriteLine("Philosophers are started now - To stop them just press ENTER");
+
+            ForkStore.Init(numberOfPhilos);
+            Help.Init();
+
+            ConcurrentBag<Philosopher> philosophers_bag = new ConcurrentBag<Philosopher>();
+            ConcurrentBag<Thread> threads_philosophers_bag = new ConcurrentBag<Thread>();
+
+            Parallel.For(0,numberOfPhilos, i =>
+            {
+                Philosopher phil = new Philosopher(i, thinkingtime, eatingtime);
+                Thread tphil = new Thread(new ThreadStart(phil.Work));
+                tphil.Start();
+
+                philosophers_bag.Add(phil);
+                threads_philosophers_bag.Add(tphil);
+            });
+
+            philosophers_list = philosophers_bag.ToList();
+
+            Console.ReadLine();
+
+            Parallel.ForEach(philosophers_list, phil => 
+                {
+                    phil.run = false;
+                });
+
+
+            foreach (var tphil in threads_philosophers_list)
+            {
+                tphil.Join();
+            }
+
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine("Stopping all philosopher threads");
+            Console.WriteLine("Press ENTER to exit programm...");
+            Console.ReadLine();
         }
 
-        public static void Abc()
+        static void ReadInt(string errorText,out int target)
         {
+            if(!Int32.TryParse(Console.ReadLine(),out target))
+            {
+                Console.WriteLine("Failed to parse input for " + errorText);
+                Console.WriteLine("***Stopped execution of programm***");
+                Console.ReadLine();
+                Environment.Exit(0);
+            }
         }
-
     }
 }
