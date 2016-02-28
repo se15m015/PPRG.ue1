@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NLog;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -70,8 +71,9 @@ namespace ue1
                 Thread.Sleep(thinkingTime);
                 Console.WriteLine("{0}: Phil{1} wants to eat now", Help.GetRuntime(), _index);
 
-                ForkStore.forks[firstFork()].WaitOne();
-                Console.WriteLine("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, _index);
+                var indexFirstFork = firstFork();
+                ForkStore.forks[indexFirstFork].WaitOne();
+                Console.WriteLine("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexFirstFork);
 
 
                 var indexSecondFork = secondFork();
@@ -83,7 +85,7 @@ namespace ue1
                 Thread.Sleep(eating_time);
                 Console.WriteLine("{0}: Phil{1} is done eating. Took {2}ms", Help.GetRuntime(), _index, eating_time);
 
-                ForkStore.forks[_index].ReleaseMutex();
+                ForkStore.forks[indexFirstFork].ReleaseMutex();
                 ForkStore.forks[indexSecondFork].ReleaseMutex();
 
             }
@@ -95,10 +97,10 @@ namespace ue1
     {
         static List<Philosopher> philosophers_list = new List<Philosopher>();
         static List<Thread> threads_philosophers_list = new List<Thread>();
+       // private static Logger _logger = LogManager.GetCurrentClassLogger();
 
         public static void Main(string[] args)
         {
-            
             Console.WriteLine("Number of Philosopher: ");
             int numberOfPhilos = 0;
             ReadInt("Number of Philosopher", out numberOfPhilos);
@@ -114,6 +116,7 @@ namespace ue1
             ReadInt("DeadlockSafe", out deadlockSafe);
 
             Console.WriteLine("{0}, {1}, {2}", numberOfPhilos, thinkingtime, eatingtime);
+           // _logger.Debug("Number of Philos: {0}, ThinkingTimeMax: {1}, EatingTimeMax: {2},DeadlockSafe: {3}", numberOfPhilos, thinkingtime, eatingtime, deadlockSafe);
 
             Console.WriteLine("Philosophers are started now - To stop them just press ENTER");
 
