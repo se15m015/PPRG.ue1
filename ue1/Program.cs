@@ -26,6 +26,11 @@ namespace ue1
         {
             return sw.ElapsedMilliseconds.ToString();
         }
+
+        public static long GetRuntimeLong()
+        {
+            return sw.ElapsedMilliseconds;
+        }
     }
 
     public static class ForkStore
@@ -98,6 +103,8 @@ namespace ue1
         static List<Philosopher> philosophers_list = new List<Philosopher>();
         static List<Thread> threads_philosophers_list = new List<Thread>();
        // private static Logger _logger = LogManager.GetCurrentClassLogger();
+        private static int _runtime = 480000; // 8 min in ms
+
 
         public static void Main(string[] args)
         {
@@ -146,7 +153,10 @@ namespace ue1
 
             philosophers_list = philosophers_bag.ToList();
 
-            Console.ReadLine();
+            while (Help.GetRuntimeLong() < _runtime)
+            {
+                Thread.Sleep(30000); // 30 sec
+            }
 
             Parallel.ForEach(philosophers_list, phil => 
                 {
@@ -163,7 +173,7 @@ namespace ue1
             Console.WriteLine();
             Console.WriteLine("Stopping all philosopher threads");
             Console.WriteLine("Press ENTER to exit programm...");
-            Console.ReadLine();
+            Console.Beep();
         }
 
         static void ReadInt(string errorText,out int target)
