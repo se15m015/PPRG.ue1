@@ -10,6 +10,7 @@ using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NLog.Targets;
 
 namespace ue1
 {
@@ -56,6 +57,7 @@ namespace ue1
         public bool run = true;
         public Func<int> firstFork;
         public Func<int> secondFork;
+        private static Logger _logger = LogManager.GetCurrentClassLogger();
 
         public Philosopher(int index, int maxThinkingTime, int maxEatingTime)
         {
@@ -73,28 +75,34 @@ namespace ue1
             {
                 var thinkingTime = rand.Next(0, _maxThinkingTime);
                 Console.WriteLine("{0}: Phil{1} is thinking for {2}ms...", Help.GetRuntime(), _index, thinkingTime);
+                _logger.Info("{0}: Phil{1} is thinking for {2}ms...", Help.GetRuntime(), _index, thinkingTime);
                 Thread.Sleep(thinkingTime);
                 Console.WriteLine("{0}: Phil{1} wants to eat now", Help.GetRuntime(), _index);
+                _logger.Info("{0}: Phil{1} wants to eat now", Help.GetRuntime(), _index);
 
                 var indexFirstFork = firstFork();
                 ForkStore.forks[indexFirstFork].WaitOne();
                 Console.WriteLine("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexFirstFork);
+                _logger.Info("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexFirstFork);
 
 
                 var indexSecondFork = secondFork();
 
                 ForkStore.forks[indexSecondFork].WaitOne();
                 Console.WriteLine("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexSecondFork);
+                _logger.Info("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexSecondFork);
 
                 var eating_time = rand.Next(0, _maxEatingTime);
                 Thread.Sleep(eating_time);
                 Console.WriteLine("{0}: Phil{1} is done eating. Took {2}ms", Help.GetRuntime(), _index, eating_time);
+                _logger.Info("{0}: Phil{1} is done eating. Took {2}ms", Help.GetRuntime(), _index, eating_time);
 
                 ForkStore.forks[indexFirstFork].ReleaseMutex();
                 ForkStore.forks[indexSecondFork].ReleaseMutex();
 
             }
-            Console.WriteLine("{0}: Phil{1} stopped", Help.GetRuntime(), _index);   
+            Console.WriteLine("{0}: Phil{1} stopped", Help.GetRuntime(), _index);
+            _logger.Info("{0}: Phil{1} stopped", Help.GetRuntime(), _index); 
         }
     }
 
@@ -102,28 +110,45 @@ namespace ue1
     {
         static List<Philosopher> philosophers_list = new List<Philosopher>();
         static List<Thread> threads_philosophers_list = new List<Thread>();
-       // private static Logger _logger = LogManager.GetCurrentClassLogger();
+        private static Logger _logger = LogManager.GetCurrentClassLogger();
         private static int _runtime = 480000; // 8 min in ms
-
 
         public static void Main(string[] args)
         {
-            Console.WriteLine("Number of Philosopher: ");
             int numberOfPhilos = 0;
-            ReadInt("Number of Philosopher", out numberOfPhilos);
-            Console.WriteLine("Thinkingtime (Milliseconds): ");
             int thinkingtime = 0;
-            ReadInt("Thinkingtime", out thinkingtime);
-            Console.WriteLine("Eatingtime (Milliseconds): ");
             int eatingtime = 0;
-            ReadInt("Eatingtime", out eatingtime);
-            // Deadlock safe
-            Console.WriteLine("Deadlock safe? 0 = false, 1 = true: ");
             int deadlockSafe = 0;
-            ReadInt("DeadlockSafe", out deadlockSafe);
+            int numberOfIteration = 1;
+
+            if (args.Length == 5)
+            {
+                numberOfPhilos = int.Parse(args[0]);
+                thinkingtime = int.Parse(args[1]);
+                eatingtime = int.Parse(args[2]);
+                deadlockSafe = int.Parse(args[3]);
+                numberOfIteration = int.Parse(args[4]);
+            }
+            else
+            {
+                Console.WriteLine("Number of Philosopher: ");
+                ReadInt("Number of Philosopher", out numberOfPhilos);
+                Console.WriteLine("Thinkingtime (Milliseconds): ");
+                ReadInt("Thinkingtime", out thinkingtime);
+                Console.WriteLine("Eatingtime (Milliseconds): ");
+                ReadInt("Eatingtime", out eatingtime);
+                // Deadlock safe
+                Console.WriteLine("Deadlock safe? 0 = false, 1 = true: ");
+                ReadInt("DeadlockSafe", out deadlockSafe);   
+            }
+
+            //Configure Log File Name
+            var target = (FileTarget)LogManager.Configuration.FindTargetByName("logfile");
+            target.FileName = String.Format("logs/Phil-{0}-Think-{1}-Eat-{2}-DLSafe-{3}-iter-{4}_{5}.log", numberOfPhilos, thinkingtime, eatingtime, deadlockSafe, numberOfIteration, DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss"));
+            LogManager.ReconfigExistingLoggers();
 
             Console.WriteLine("{0}, {1}, {2}", numberOfPhilos, thinkingtime, eatingtime);
-           // _logger.Debug("Number of Philos: {0}, ThinkingTimeMax: {1}, EatingTimeMax: {2},DeadlockSafe: {3}", numberOfPhilos, thinkingtime, eatingtime, deadlockSafe);
+            _logger.Info("Number of Philos: {0}, ThinkingTimeMax: {1}, EatingTimeMax: {2},DeadlockSafe: {3}", numberOfPhilos, thinkingtime, eatingtime, deadlockSafe);
 
             Console.WriteLine("Philosophers are started now - To stop them just press ENTER");
 
@@ -174,6 +199,10 @@ namespace ue1
             Console.WriteLine("Stopping all philosopher threads");
             Console.WriteLine("Press ENTER to exit programm...");
             Console.Beep();
+
+            _logger.Info("-----------------------------");
+            _logger.Info("Stopping all philosopher threads");
+            _logger.Info("Press ENTER to exit programm...");  
         }
 
         static void ReadInt(string errorText,out int target)
@@ -185,6 +214,11 @@ namespace ue1
                 Console.ReadLine();
                 Environment.Exit(0);
             }
+        }
+
+        public string ProjectPath()
+        {
+            return Environment.CurrentDirectory;
         }
     }
 }
