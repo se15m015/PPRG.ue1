@@ -37,24 +37,15 @@ namespace ue1
     public static class ForkStore
     {
         public static Mutex[] forks;
-        //private static int freeForks = 0;
-        //private static int philoEating = 0;
 
         public static void Init(int numberOfPhilos)
         {
             forks = new Mutex[numberOfPhilos];
-           // freeForks = numberOfPhilos;
             for (int i = 0; i < forks.Length; i++)
             {
                 forks[i] = new Mutex();
             }
         }
-
-        //public static void TakeFork(){ freeForks--; }
-        //public static void ReleaseFork(){ freeForks++; }
-        //public static void PhiloEating() { philoEating++; }
-        //public static void PhiloEatingDone() { philoEating--; }
-        //public static bool IsDeadlock(){ return (freeForks == 0 && philoEating == 0); }
     }
 
     public class Philosopher
@@ -89,20 +80,12 @@ namespace ue1
 
                 var indexFirstFork = firstFork();
                 ForkStore.forks[indexFirstFork].WaitOne();
-                //ForkStore.TakeFork();
                 _logger.Info("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexFirstFork);
 
                 var indexSecondFork = secondFork();
 
-                
-                //if (ForkStore.IsDeadlock())
-                //{
-                //    _logger.Info("DEADLOCK {0}, Philo: {1}", Help.GetRuntime(), _index);
-                //}
-
                 ForkStore.forks[indexSecondFork].WaitOne();
-                //ForkStore.TakeFork();
-                //ForkStore.PhiloEating();
+            
                 _logger.Info("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexSecondFork);
 
                 var eating_time = rand.Next(0, _maxEatingTime);
@@ -110,10 +93,7 @@ namespace ue1
                 _logger.Info("{0}: Phil{1} is done eating. Took {2}ms", Help.GetRuntime(), _index, eating_time);
 
                 ForkStore.forks[indexFirstFork].ReleaseMutex();
-               // ForkStore.ReleaseFork();
                 ForkStore.forks[indexSecondFork].ReleaseMutex();
-                //ForkStore.ReleaseFork();
-                //ForkStore.PhiloEatingDone();
             }
             _logger.Info("{0}: Phil{1} stopped", Help.GetRuntime(), _index); 
         }
@@ -125,7 +105,7 @@ namespace ue1
         static List<Thread> threads_philosophers_list = new List<Thread>();
         private static Logger _logger = LogManager.GetCurrentClassLogger();
         private static int _runtime = 480000; // 8 min in ms
-        //private static int _runtime = 10000; // 8 min in ms
+        //private static int _runtime = 10000; // 10 sec in ms
 
         public static void Main(string[] args)
         {
@@ -175,7 +155,7 @@ namespace ue1
             {
                 Philosopher phil = new Philosopher(i, thinkingtime, eatingtime);
 
-                // Anti Deadlock -> righthanded Phil
+                // Anti Deadlock -> righthanded Philo
                 if (i == 0 && deadlockSafe == 1)
                 {
                     phil.firstFork = () => { return (i + 1)%ForkStore.forks.Length; };
