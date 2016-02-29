@@ -37,15 +37,24 @@ namespace ue1
     public static class ForkStore
     {
         public static Mutex[] forks;
+        //private static int freeForks = 0;
+        //private static int philoEating = 0;
 
         public static void Init(int numberOfPhilos)
         {
             forks = new Mutex[numberOfPhilos];
+           // freeForks = numberOfPhilos;
             for (int i = 0; i < forks.Length; i++)
             {
                 forks[i] = new Mutex();
             }
         }
+
+        //public static void TakeFork(){ freeForks--; }
+        //public static void ReleaseFork(){ freeForks++; }
+        //public static void PhiloEating() { philoEating++; }
+        //public static void PhiloEatingDone() { philoEating--; }
+        //public static bool IsDeadlock(){ return (freeForks == 0 && philoEating == 0); }
     }
 
     public class Philosopher
@@ -74,34 +83,38 @@ namespace ue1
             while (run)
             {
                 var thinkingTime = rand.Next(0, _maxThinkingTime);
-                Console.WriteLine("{0}: Phil{1} is thinking for {2}ms...", Help.GetRuntime(), _index, thinkingTime);
                 _logger.Info("{0}: Phil{1} is thinking for {2}ms...", Help.GetRuntime(), _index, thinkingTime);
                 Thread.Sleep(thinkingTime);
-                Console.WriteLine("{0}: Phil{1} wants to eat now", Help.GetRuntime(), _index);
                 _logger.Info("{0}: Phil{1} wants to eat now", Help.GetRuntime(), _index);
 
                 var indexFirstFork = firstFork();
                 ForkStore.forks[indexFirstFork].WaitOne();
-                Console.WriteLine("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexFirstFork);
+                //ForkStore.TakeFork();
                 _logger.Info("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexFirstFork);
-
 
                 var indexSecondFork = secondFork();
 
+                
+                //if (ForkStore.IsDeadlock())
+                //{
+                //    _logger.Info("DEADLOCK {0}, Philo: {1}", Help.GetRuntime(), _index);
+                //}
+
                 ForkStore.forks[indexSecondFork].WaitOne();
-                Console.WriteLine("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexSecondFork);
+                //ForkStore.TakeFork();
+                //ForkStore.PhiloEating();
                 _logger.Info("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexSecondFork);
 
                 var eating_time = rand.Next(0, _maxEatingTime);
                 Thread.Sleep(eating_time);
-                Console.WriteLine("{0}: Phil{1} is done eating. Took {2}ms", Help.GetRuntime(), _index, eating_time);
                 _logger.Info("{0}: Phil{1} is done eating. Took {2}ms", Help.GetRuntime(), _index, eating_time);
 
                 ForkStore.forks[indexFirstFork].ReleaseMutex();
+               // ForkStore.ReleaseFork();
                 ForkStore.forks[indexSecondFork].ReleaseMutex();
-
+                //ForkStore.ReleaseFork();
+                //ForkStore.PhiloEatingDone();
             }
-            Console.WriteLine("{0}: Phil{1} stopped", Help.GetRuntime(), _index);
             _logger.Info("{0}: Phil{1} stopped", Help.GetRuntime(), _index); 
         }
     }
@@ -148,7 +161,6 @@ namespace ue1
             target.FileName = String.Format("logs/{0}-{1}-{2}-{3}/Phil-{0}-Think-{1}-Eat-{2}-DLSafe-{3}-iter-{4}_{5}.log", numberOfPhilos, thinkingtime, eatingtime, deadlockSafe, numberOfIteration, DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss"));
             LogManager.ReconfigExistingLoggers();
 
-            Console.WriteLine("{0}, {1}, {2}", numberOfPhilos, thinkingtime, eatingtime);
             _logger.Info("Number of Philos: {0}, ThinkingTimeMax: {1}, EatingTimeMax: {2},DeadlockSafe: {3}", numberOfPhilos, thinkingtime, eatingtime, deadlockSafe);
 
             Console.WriteLine("Philosophers are started now - To stop them just press ENTER");
@@ -195,10 +207,10 @@ namespace ue1
                 tphil.Join();
             }
 
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine("Stopping all philosopher threads");
-            Console.WriteLine("Press ENTER to exit programm...");
+            //Console.WriteLine();
+            //Console.WriteLine();
+            //Console.WriteLine("Stopping all philosopher threads");
+            //Console.WriteLine("Press ENTER to exit programm...");
            // Console.Beep();
 
             _logger.Info("-----------------------------");
