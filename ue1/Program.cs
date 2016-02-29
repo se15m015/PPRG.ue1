@@ -112,6 +112,7 @@ namespace ue1
         static List<Thread> threads_philosophers_list = new List<Thread>();
         private static Logger _logger = LogManager.GetCurrentClassLogger();
         private static int _runtime = 480000; // 8 min in ms
+        //private static int _runtime = 10000; // 8 min in ms
 
         public static void Main(string[] args)
         {
@@ -144,7 +145,7 @@ namespace ue1
 
             //Configure Log File Name
             var target = (FileTarget)LogManager.Configuration.FindTargetByName("logfile");
-            target.FileName = String.Format("logs/Phil-{0}-Think-{1}-Eat-{2}-DLSafe-{3}-iter-{4}_{5}.log", numberOfPhilos, thinkingtime, eatingtime, deadlockSafe, numberOfIteration, DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss"));
+            target.FileName = String.Format("logs/{0}-{1}-{2}-{3}/Phil-{0}-Think-{1}-Eat-{2}-DLSafe-{3}-iter-{4}_{5}.log", numberOfPhilos, thinkingtime, eatingtime, deadlockSafe, numberOfIteration, DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss"));
             LogManager.ReconfigExistingLoggers();
 
             Console.WriteLine("{0}, {1}, {2}", numberOfPhilos, thinkingtime, eatingtime);
@@ -198,11 +199,12 @@ namespace ue1
             Console.WriteLine();
             Console.WriteLine("Stopping all philosopher threads");
             Console.WriteLine("Press ENTER to exit programm...");
-            Console.Beep();
+           // Console.Beep();
 
             _logger.Info("-----------------------------");
             _logger.Info("Stopping all philosopher threads");
-            _logger.Info("Press ENTER to exit programm...");  
+            _logger.Info("Press ENTER to exit programm...");
+            Environment.Exit(1);
         }
 
         static void ReadInt(string errorText,out int target)
