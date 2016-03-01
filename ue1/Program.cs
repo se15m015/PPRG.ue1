@@ -37,14 +37,38 @@ namespace ue1
     public static class ForkStore
     {
         public static Mutex[] forks;
+        public static int[] eatingTimeSum;
+        public static int[] eatingCount;
 
         public static void Init(int numberOfPhilos)
         {
             forks = new Mutex[numberOfPhilos];
+            eatingTimeSum = new int[numberOfPhilos];
+            eatingCount = new int[numberOfPhilos];
+
             for (int i = 0; i < forks.Length; i++)
             {
                 forks[i] = new Mutex();
+                eatingTimeSum[i] = 0;
+                eatingCount[i] = 0;
             }
+        }
+
+        public static void AddEatingTime(int index,int eatingTime)
+        {
+            eatingTimeSum[index] = eatingTimeSum[index] + eatingTime;
+            eatingCount[index]++;
+        }
+
+        public static string EatingSumOfAllPhilo()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("EatingSum: ");
+            for (int i = 0; i < eatingTimeSum.Length; i++)
+            {
+                sb.AppendLine(String.Format("[P: {0}, Sum: {1}, Count: {2}]; ", i, eatingTimeSum[i], eatingCount[i]));
+            }
+            return sb.ToString();
         }
     }
 
@@ -74,28 +98,30 @@ namespace ue1
             while (run)
             {
                 var thinkingTime = rand.Next(0, _maxThinkingTime);
-                _logger.Info("{0}: Phil{1} is thinking for {2}ms...", Help.GetRuntime(), _index, thinkingTime);
+                _logger.Info("{0}: Phil_{1} is thinking for {2}ms...", Help.GetRuntime(), _index, thinkingTime);
                 Thread.Sleep(thinkingTime);
-                _logger.Info("{0}: Phil{1} wants to eat now", Help.GetRuntime(), _index);
+                _logger.Info("{0}: Phil_{1} wants to eat now", Help.GetRuntime(), _index);
 
                 var indexFirstFork = firstFork();
                 ForkStore.forks[indexFirstFork].WaitOne();
-                _logger.Info("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexFirstFork);
+                _logger.Info("{0}: Phil_{1} took fork {2}", Help.GetRuntime(), _index, indexFirstFork);
 
                 var indexSecondFork = secondFork();
 
                 ForkStore.forks[indexSecondFork].WaitOne();
             
-                _logger.Info("{0}: Phil{1} took fork {2}", Help.GetRuntime(), _index, indexSecondFork);
+                _logger.Info("{0}: Phil_{1} took fork {2}", Help.GetRuntime(), _index, indexSecondFork);
 
                 var eating_time = rand.Next(0, _maxEatingTime);
                 Thread.Sleep(eating_time);
-                _logger.Info("{0}: Phil{1} is done eating. Took {2}ms", Help.GetRuntime(), _index, eating_time);
+                ForkStore.AddEatingTime(_index, eating_time);
+                _logger.Info("{0}: Phil_{1} is done eating. Puts back Fork {2} and {3}. Eatingtime {4}ms", Help.GetRuntime(), _index, indexFirstFork, indexSecondFork, eating_time);
+                _logger.Info(ForkStore.EatingSumOfAllPhilo());
 
                 ForkStore.forks[indexFirstFork].ReleaseMutex();
                 ForkStore.forks[indexSecondFork].ReleaseMutex();
             }
-            _logger.Info("{0}: Phil{1} stopped", Help.GetRuntime(), _index); 
+            _logger.Info("{0}: Phil_{1} stopped", Help.GetRuntime(), _index); 
         }
     }
 
