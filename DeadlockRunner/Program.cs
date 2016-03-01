@@ -13,11 +13,11 @@ namespace DeadlockRunner
     {
         static void Main(string[] args)
         {
-            var philoValues = new int[] {5, 50};
-            var thinkingValues = new int[] {10, 1000};
-            var eatingValues = new int[] {10, 1000};
+            var philoValues = new int[] {8};
+            var thinkingValues = new int[] {50};
+            var eatingValues = new int[] {50};
             int deadlockSafe = 0;
-            int maxConcurrentProc = 10;
+            int maxConcurrentProc = 20;
             int numberOfIterations = 10;
 
             var procBag = new ConcurrentBag<Process>();
@@ -37,7 +37,7 @@ namespace DeadlockRunner
 
                             procBag.Add(proc);
 
-                            if (procBag.Count >= maxConcurrentProc)
+                            if (maxConcurrentProc !=-1 && procBag.Count >= maxConcurrentProc)
                             {
                                 foreach (var process in procBag)
                                 {
@@ -52,6 +52,8 @@ namespace DeadlockRunner
                     }
                 }
             }
+
+            Console.WriteLine("Press any Key to Exit...");
             Console.ReadKey();
 
 

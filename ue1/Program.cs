@@ -14,6 +14,9 @@ using NLog.Targets;
 
 namespace ue1
 {
+    /// <summary>
+    /// Help Class to provide a function to get overall runtime of Application
+    /// </summary>
     public static class Help
     {
         static Stopwatch sw = new Stopwatch();
@@ -34,6 +37,9 @@ namespace ue1
         }
     }
 
+    /// <summary>
+    /// The forkstore holds the array of forks/mutexes and is missused to calc the sum of eatingTime
+    /// </summary>
     public static class ForkStore
     {
         public static Mutex[] forks;
@@ -141,6 +147,7 @@ namespace ue1
             int deadlockSafe = 0;
             int numberOfIteration = 1;
 
+            //if args is set then the program is started via the DeadlockRunner - Project
             if (args.Length == 5)
             {
                 numberOfPhilos = int.Parse(args[0]);
@@ -197,17 +204,20 @@ namespace ue1
 
             philosophers_list = philosophers_bag.ToList();
 
+            //Stopp the main Thread for the _runtime Value
             while (Help.GetRuntimeLong() < _runtime)
             {
                 Thread.Sleep(30000); // 30 sec
             }
 
+            //Stopp the loops of the philosophers
             Parallel.ForEach(philosophers_list, phil => 
                 {
                     phil.run = false;
                 });
 
 
+            //Join the Philosopher Threads
             foreach (var tphil in threads_philosophers_list)
             {
                 tphil.Join();
